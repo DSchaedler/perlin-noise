@@ -3,7 +3,7 @@
 GRID_SIZE = 80
 ROWS = 720 / GRID_SIZE
 COLUMNS = 1280 / GRID_SIZE
-PIXEL_SCALE = 10
+PIXEL_SCALE = 2
 
 def tick(args)
   args.state.starup_done ||= false
