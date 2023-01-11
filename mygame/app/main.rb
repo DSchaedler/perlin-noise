@@ -53,32 +53,30 @@ def find_pixel_alphas(args)
                                                y: j * PIXEL_SCALE })
 
       dot_products = []
-      if ll_corner[:x] && ll_corner[:y]
-        args.state.grid_array[ll_corner[:x]] ||= []
-        args.state.grid_array[ll_corner[:x]][ll_corner[:y]] ||= {x: 0, y: 0}
-        dot_products << vector_dot_product(vector1: args.state.grid_array[ll_corner[:x]][ll_corner[:y]],
-                                           vector2: ll_distance)
-      end
-      if ul_corner[:x] && ul_corner[:y]
-        args.state.grid_array[ul_corner[:x]] ||= []
-        args.state.grid_array[ul_corner[:x]][ul_corner[:y]] ||= {x: 0, y: 0}
-        dot_products << vector_dot_product(vector1: args.state.grid_array[ul_corner[:x]][ul_corner[:y]],
-                                           vector2: ul_distance)
-      end
-      if lr_corner[:x] && lr_corner[:y]
-        args.state.grid_array[lr_corner[:x]] ||= []
-        args.state.grid_array[lr_corner[:x]][lr_corner[:y]] ||= {x: 0, y: 0}
-        dot_products << vector_dot_product(vector1: args.state.grid_array[lr_corner[:x]][lr_corner[:y]],
-                                           vector2: lr_distance)
-      end
-      if ur_corner[:x] && ur_corner[:y]
-        args.state.grid_array[ur_corner[:x]] ||= []
-        args.state.grid_array[ur_corner[:x]][ur_corner[:y]] ||= {x: 0, y: 0}
-        dot_products << vector_dot_product(vector1: args.state.grid_array[ur_corner[:x]][ur_corner[:y]],
-                                           vector2: ur_distance)
-      end
 
-      interpolated_value = dot_products.sum / dot_products.size
+      args.state.grid_array[ll_corner[:x]] ||= []
+      args.state.grid_array[ll_corner[:x]][ll_corner[:y]] ||= { x: 0, y: 0 }
+      ll_product = vector_dot_product(vector1: args.state.grid_array[ll_corner[:x]][ll_corner[:y]],
+                                         vector2: ll_distance)
+
+      args.state.grid_array[ul_corner[:x]] ||= []
+      args.state.grid_array[ul_corner[:x]][ul_corner[:y]] ||= { x: 0, y: 0 }
+      ul_product = vector_dot_product(vector1: args.state.grid_array[ul_corner[:x]][ul_corner[:y]],
+                                         vector2: ul_distance)
+
+      args.state.grid_array[lr_corner[:x]] ||= []
+      args.state.grid_array[lr_corner[:x]][lr_corner[:y]] ||= { x: 0, y: 0 }
+      lr_product = vector_dot_product(vector1: args.state.grid_array[lr_corner[:x]][lr_corner[:y]],
+                                         vector2: lr_distance)
+
+      args.state.grid_array[ur_corner[:x]] ||= []
+      args.state.grid_array[ur_corner[:x]][ur_corner[:y]] ||= { x: 0, y: 0 }
+      ur_product = vector_dot_product(vector1: args.state.grid_array[ur_corner[:x]][ur_corner[:y]],
+                                         vector2: ur_distance)
+
+      left_average = (ll_product + ul_product) / 2
+      right_average = (lr_product + ur_product) / 2
+      interpolated_value = (left_average + right_average) / 2
 
       args.state.pixels[i][j] =
         { x: i * PIXEL_SCALE, y: j * PIXEL_SCALE, w: 1 * PIXEL_SCALE, h: 1 * PIXEL_SCALE, a: interpolated_value,
