@@ -3,7 +3,7 @@
 GRID_SIZE = 80
 ROWS = 720 / GRID_SIZE
 COLUMNS = 1280 / GRID_SIZE
-PIXEL_SCALE = 1
+PIXEL_SCALE = 10
 
 def tick(args)
   args.state.starup_done ||= false
@@ -23,7 +23,7 @@ def define_grid(args)
     args.state.grid_array[i] ||= []
     ROWS.times_with_index do |j|
       args.state.grid_array[i][j] =
-        point_at_distance_angle({ point: { x: 0, y: 0 }, distance: GRID_SIZE, angle: (rand * 360).round(0) })
+        point_at_distance_angle({ point: { x: 0 , y: 0}, distance: 1, angle: (rand * 360).round(0) })
     end
   end
 end
@@ -42,15 +42,19 @@ def find_pixel_alphas(args)
       ll_distance = point_difference(point1: { x: ll_corner[:x] * GRID_SIZE, y: ll_corner[:y] * GRID_SIZE },
                                      point2: { x: i * PIXEL_SCALE,
                                                y: j * PIXEL_SCALE })
+      ll_distance = normalize_vector(ll_distance)
       ul_distance = point_difference(point1: { x: ul_corner[:x] * GRID_SIZE, y: ul_corner[:y] * GRID_SIZE },
                                      point2: { x: i * PIXEL_SCALE,
                                                y: j * PIXEL_SCALE })
+      ul_distance = normalize_vector(ul_distance)
       lr_distance = point_difference(point1: { x: lr_corner[:x] * GRID_SIZE, y: lr_corner[:y] * GRID_SIZE },
                                      point2: { x: i * PIXEL_SCALE,
                                                y: j * PIXEL_SCALE })
+      lr_distance = normalize_vector(lr_distance)
       ur_distance = point_difference(point1: { x: ur_corner[:x] * GRID_SIZE, y: ur_corner[:y] * GRID_SIZE },
                                      point2: { x: i * PIXEL_SCALE,
                                                y: j * PIXEL_SCALE })
+      ur_distance = normalize_vector(ur_distance)
 
       dot_products = []
 
@@ -77,6 +81,9 @@ def find_pixel_alphas(args)
       left_average = (ll_product + ul_product) / 2
       right_average = (lr_product + ur_product) / 2
       interpolated_value = (left_average + right_average) / 2
+      
+      interpolated_value = interpolated_value + 1
+      interpolated_value = interpolated_value * 128
 
       args.state.pixels[i][j] =
         { x: i * PIXEL_SCALE, y: j * PIXEL_SCALE, w: 1 * PIXEL_SCALE, h: 1 * PIXEL_SCALE, a: interpolated_value,
@@ -88,6 +95,11 @@ end
 def run_startup(args)
   args.state.startup_done = true
   putz "Rows: #{ROWS}, Columns: #{COLUMNS}"
+end
+
+def normalize_vector(vector)
+  length = point_distance(point1: {x: 0, y: 0}, point2: vector)
+  {x: vector[:x] / length, y: vector[:y] / length}
 end
 
 def point_average(point1:, point2:)
@@ -112,4 +124,10 @@ end
 
 def vector_dot_product(vector1:, vector2:)
   (vector1[:x] * vector2[:x]) + (vector1[:y] * vector2[:y])
+end
+
+def point_distance(point1:, point2:)
+  dx = point2.x - point1.x
+  dy = point2.y - point1.y
+  Math.sqrt((dx * dx) + (dy * dy))
 end
