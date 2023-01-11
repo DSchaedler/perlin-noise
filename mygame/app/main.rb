@@ -3,7 +3,7 @@
 GRID_SIZE = 80
 ROWS = 720 / GRID_SIZE
 COLUMNS = 1280 / GRID_SIZE
-PIXEL_SCALE = 32
+PIXEL_SCALE = 1
 
 def tick(args)
   args.state.starup_done ||= false
@@ -54,18 +54,26 @@ def find_pixel_alphas(args)
 
       dot_products = []
       if ll_corner[:x] && ll_corner[:y]
+        args.state.grid_array[ll_corner[:x]] ||= []
+        args.state.grid_array[ll_corner[:x]][ll_corner[:y]] ||= {x: 0, y: 0}
         dot_products << vector_dot_product(vector1: args.state.grid_array[ll_corner[:x]][ll_corner[:y]],
                                            vector2: ll_distance)
       end
       if ul_corner[:x] && ul_corner[:y]
+        args.state.grid_array[ul_corner[:x]] ||= []
+        args.state.grid_array[ul_corner[:x]][ul_corner[:y]] ||= {x: 0, y: 0}
         dot_products << vector_dot_product(vector1: args.state.grid_array[ul_corner[:x]][ul_corner[:y]],
                                            vector2: ul_distance)
       end
       if lr_corner[:x] && lr_corner[:y]
+        args.state.grid_array[lr_corner[:x]] ||= []
+        args.state.grid_array[lr_corner[:x]][lr_corner[:y]] ||= {x: 0, y: 0}
         dot_products << vector_dot_product(vector1: args.state.grid_array[lr_corner[:x]][lr_corner[:y]],
                                            vector2: lr_distance)
       end
       if ur_corner[:x] && ur_corner[:y]
+        args.state.grid_array[ur_corner[:x]] ||= []
+        args.state.grid_array[ur_corner[:x]][ur_corner[:y]] ||= {x: 0, y: 0}
         dot_products << vector_dot_product(vector1: args.state.grid_array[ur_corner[:x]][ur_corner[:y]],
                                            vector2: ur_distance)
       end
