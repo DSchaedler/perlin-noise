@@ -1,133 +1,91 @@
+# Dragonruby Implementation of this: https://github.com/mjwhitt/fractal_noise
+
 # frozen_string_literal: true
 
-GRID_SIZE = 80
-ROWS = 720 / GRID_SIZE
-COLUMNS = 1280 / GRID_SIZE
-PIXEL_SCALE = 10
+WIDTH   = 1280 # 0 - 1280
+HEIGHT  = 720 # 0 - 720
+OCTAVE  = 6 # Really not sure.
 
 def tick(args)
-  args.state.starup_done ||= false
-  run_startup(args) unless args.state.startup_done
+  $perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
+  $noise ||= $perlin_noise.noise(OCTAVE)
 
-  args.state.grid_array ||= []
-  define_grid(args) unless args.state.grid_array != []
+  convert_pixels($noise) unless $noise_pixels
 
-  args.state.pixels ||= []
-  find_pixel_alphas(args) unless args.state.pixels != []
-
-  args.outputs.primitives << args.state.pixels
+  args.outputs.primitives << $noise_pixels
 end
 
-def define_grid(args)
-  COLUMNS.times_with_index do |i|
-    args.state.grid_array[i] ||= []
-    ROWS.times_with_index do |j|
-      args.state.grid_array[i][j] =
-        point_at_distance_angle({ point: { x: 0, y: 0 }, distance: 1, angle: (rand * 360).round(0) })
+def convert_pixels(noise)
+  noise.length.times_with_index do |x|
+    noise[x].length.times_with_index do |y|
+      $noise_pixels ||= []
+      $noise_pixels << { x: x, y: y, w: 1, h: 1, a: noise[x][y] * 255, primitive_marker: :solid }
     end
   end
 end
 
-def find_pixel_alphas(args)
-  (1280 / PIXEL_SCALE).times_with_index do |i|
-    args.state.pixels[i] ||= []
-    (720 / PIXEL_SCALE).times_with_index do |j|
-      # find which grid cell we're in
-      ll_corner = { x: ((i * PIXEL_SCALE) - ((i * PIXEL_SCALE) % GRID_SIZE)) / GRID_SIZE,
-                    y: ((j * PIXEL_SCALE) - ((j * PIXEL_SCALE) % GRID_SIZE)) / GRID_SIZE }
-      ul_corner = { x: ll_corner[:x], y: ll_corner[:y] + 1 }
-      lr_corner = { x: ll_corner[:x] + 1, y: ll_corner[:y] }
-      ur_corner = { x: ll_corner[:x] + 1, y: ll_corner[:y] + 1 }
+class PerlinNoise
+  def initialize(width, height, random = rand())
+    super
+    @width = width
+    @height = height
 
-      ll_distance = point_difference(point2: { x: ll_corner[:x] * GRID_SIZE, y: ll_corner[:y] * GRID_SIZE },
-                                     point1: { x: i * PIXEL_SCALE,
-                                               y: j * PIXEL_SCALE })
-      ll_distance = normalize_vector(ll_distance)
-      ul_distance = point_difference(point2: { x: ul_corner[:x] * GRID_SIZE, y: ul_corner[:y] * GRID_SIZE },
-                                     point1: { x: i * PIXEL_SCALE,
-                                               y: j * PIXEL_SCALE })
-      ul_distance = normalize_vector(ul_distance)
-      lr_distance = point_difference(point2: { x: lr_corner[:x] * GRID_SIZE, y: lr_corner[:y] * GRID_SIZE },
-                                     point1: { x: i * PIXEL_SCALE,
-                                               y: j * PIXEL_SCALE })
-      lr_distance = normalize_vector(lr_distance)
-      ur_distance = point_difference(point2: { x: ur_corner[:x] * GRID_SIZE, y: ur_corner[:y] * GRID_SIZE },
-                                     point1: { x: i * PIXEL_SCALE,
-                                               y: j * PIXEL_SCALE })
-      ur_distance = normalize_vector(ur_distance)
+    @p = (0...([@width, @height].max)).to_a.shuffle * 2
+  end
 
-      dot_products = []
+  def noise(octave)
+    noise     = []
+    period    = 1 << octave
+    frequency = 1.0 / period
 
-      args.state.grid_array[ll_corner[:x]] ||= []
-      args.state.grid_array[ll_corner[:x]][ll_corner[:y]] ||= { x: 0, y: 0 }
-      ll_product = vector_dot_product(vector1: args.state.grid_array[ll_corner[:x]][ll_corner[:y]],
-                                      vector2: ll_distance)
+    @width.times do |x|
+      noise[x] ||= []
+      xa = (x * frequency) % (@width * frequency)
+      x1 = xa.to_i
+      x2 = (x1 + 1) % (@width * frequency)
 
-      args.state.grid_array[ul_corner[:x]] ||= []
-      args.state.grid_array[ul_corner[:x]][ul_corner[:y]] ||= { x: 0, y: 0 }
-      ul_product = vector_dot_product(vector1: args.state.grid_array[ul_corner[:x]][ul_corner[:y]],
-                                      vector2: ul_distance)
+      xf = xa - xa.to_i
+      xb = fade(xf)
 
-      args.state.grid_array[lr_corner[:x]] ||= []
-      args.state.grid_array[lr_corner[:x]][lr_corner[:y]] ||= { x: 0, y: 0 }
-      lr_product = vector_dot_product(vector1: args.state.grid_array[lr_corner[:x]][lr_corner[:y]],
-                                      vector2: lr_distance)
+      @height.times do |y|
+        ya = (y * frequency) % (@height * frequency)
+        y1 = ya.to_i
+        y2 = (y1 + 1) % (@height * frequency)
 
-      args.state.grid_array[ur_corner[:x]] ||= []
-      args.state.grid_array[ur_corner[:x]][ur_corner[:y]] ||= { x: 0, y: 0 }
-      ur_product = vector_dot_product(vector1: args.state.grid_array[ur_corner[:x]][ur_corner[:y]],
-                                      vector2: ur_distance)
+        yf = ya - ya.to_i
+        yb = fade(yf)
 
-      left_average = (ll_product + ul_product) / 2
-      right_average = (lr_product + ur_product) / 2
-      interpolated_value = (left_average + right_average) / 2
+        top    = interpolate(gradient(@p[@p[x1] + y1], xf, yf), gradient(@p[@p[x2] + y1], xf - 1, yf), xb)
+        bottom = interpolate(gradient(@p[@p[x1] + y2], xf, yf - 1), gradient(@p[@p[x2] + y2], xf - 1, yf - 1), xb)
 
-      interpolated_value += 1
-      interpolated_value *= 64
+        noise[x][y] = (interpolate(top, bottom, yb) + 1) / 2
+      end
+    end
+    noise
+  end
 
-      args.state.pixels[i][j] =
-        { x: i * PIXEL_SCALE, y: j * PIXEL_SCALE, w: 1 * PIXEL_SCALE, h: 1 * PIXEL_SCALE, r: 255, a: interpolated_value,
-          primitive_marker: :solid }
+  def interpolate(a, b, alpha)
+    linear_interpolation(a, b, alpha)
+  end
+
+  def linear_interpolation(a, b, alpha)
+    a * (1 - alpha) + b * alpha
+  end
+
+  def fade(t)
+    t * t * t * (t * (t * 6 - 15) + 10)
+  end
+
+  def gradient(h, x, y)
+    case h & 7
+    when 0 then y
+    when 1 then x + y
+    when 2 then x
+    when 3 then x - y
+    when 4 then - y
+    when 5 then -x - y
+    when 6 then -x
+    when 7 then -x + y
     end
   end
-end
-
-def run_startup(args)
-  args.state.startup_done = true
-  putz "Rows: #{ROWS}, Columns: #{COLUMNS}"
-end
-
-def normalize_vector(vector)
-  length = point_distance(point1: { x: 0, y: 0 }, point2: vector)
-  { x: vector[:x] / length, y: vector[:y] / length }
-end
-
-def point_average(point1:, point2:)
-  { x: (point1.x + point2.x) / 2, y: (point1.y + point2.y) / 2 }
-end
-
-def point_at_distance_angle(options = {})
-  point = options[:point]
-  distance = options[:distance]
-  angle = options[:angle]
-
-  new_point = {}
-
-  new_point[:x] = (distance * Math.cos(angle * Math::PI / 180)) + point[:x]
-  new_point[:y] = (distance * Math.sin(angle * Math::PI / 180)) + point[:y]
-  new_point
-end
-
-def point_difference(point1:, point2:)
-  { x: (point1.x - point2.x), y: (point1.y - point2.y) }
-end
-
-def vector_dot_product(vector1:, vector2:)
-  (vector1[:x] * vector2[:x]) + (vector1[:y] * vector2[:y])
-end
-
-def point_distance(point1:, point2:)
-  dx = (point2.x - point1.x)
-  dy = (point2.y - point1.y)
-  Math.sqrt((dx * dx) + (dy * dy))
 end
