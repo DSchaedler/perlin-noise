@@ -30,3 +30,5 @@ console_history.txt
 logs/
 eula.txt
 dragonruby-vrsim.exe
+.DS_Store
+.gitattributes
