@@ -28,12 +28,12 @@
 
 # frozen_string_literal: true
 
-PIXEL_SCALE = 8 # Recommended to reduce the octave if you increase this value.
+PIXEL_SCALE = 8 # Recommended to reduce the frequency if you increase this value.
 OUTPUT_W = 1280
 OUTPUT_H = 720
 
-OCTAVE = 3 # 0 - 9. How gritty or smooth the noise is
-LACUNARITY = 2 # how bright the image is, how deep the lakes are.
+FREQUENCY = 3 # 0 - 9. How gritty or smooth the noise is
+BRIGHTNESS = 2 #
 
 Log = false
 
@@ -45,7 +45,7 @@ def tick(args)
 
   args.state.perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
   ts = Time.new
-  args.state.noise ||= args.state.perlin_noise.noise(OCTAVE)
+  args.state.noise ||= args.state.perlin_noise.noise(FREQUENCY)
   te = Time.new
 
   if args.tick_count == 0 && Log
@@ -139,7 +139,7 @@ class PerlinNoise
         # top = linear_interpolation(gradient(@p[px1 + y1], xf, yf), gradient(@p[px2 + y1], xf - 1, yf), xb)
         # bottom = linear_interpolation(gradient(@p[px1 + y2], xf, yf - 1), gradient(@p[px2 + y2], xf - 1, yf - 1), xb)
 
-        nx[y_iter] = (linear_interpolation(top, bottom, yb) + 1) / LACUNARITY
+        nx[y_iter] = (linear_interpolation(top, bottom, yb) + 1) / BRIGHTNESS
         y_iter += 1
       end
 
