@@ -2,12 +2,12 @@
 
 # frozen_string_literal: true
 
-WIDTH   = 1280 # 0 - 1280
-HEIGHT  = 720 # 0 - 720
+WIDTH   = 400 # 0 - 1280
+HEIGHT  = 400 # 0 - 720
 
 # Controls the scale of the noise
-# Values over 10 break, so I'm assuming it's a percentage represented between 0-10
-OCTAVE  = 5 
+# Values 10 or over break, so I'm assuming it's a percentage represented between 0-9
+OCTAVE  = 5
 
 def tick(args)
   $perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
@@ -15,15 +15,22 @@ def tick(args)
 
   convert_pixels($noise) unless $noise_pixels
 
-  args.outputs.primitives << $noise_pixels
+  $output ||= false
+  args.outputs.static_primitives.concat($noise_pixels) unless $output
+  $output = true
 end
 
 def convert_pixels(noise)
-  noise.length.times_with_index do |x|
-    noise[x].length.times_with_index do |y|
-      $noise_pixels ||= []
-      $noise_pixels << { x: x, y: y, w: 1, h: 1, a: noise[x][y] * 255, primitive_marker: :solid }
+  $noise_pixels ||= []
+  x_iter = 0
+
+  while x_iter < WIDTH
+    y_iter = 0
+    while y_iter < HEIGHT
+      $noise_pixels.unshift({ x: x_iter, y: y_iter, w: 1, h: 1, a: noise[x_iter][y_iter] * 255, primitive_marker: :solid })
+      y_iter += 1
     end
+    x_iter += 1
   end
 end
 
@@ -41,28 +48,40 @@ class PerlinNoise
     period    = 1 << octave
     frequency = 1.0 / period
 
-    @width.times do |x|
-      noise[x] ||= []
-      xa = (x * frequency) % (@width * frequency)
+    w_frequency = @width * frequency
+    h_frequency = @height * frequency
+
+    x_iter = 0
+
+    while x_iter < @width
+      noise[x_iter] ||= []
+      xa = (x_iter * frequency) % w_frequency
       x1 = xa.to_i
-      x2 = (x1 + 1) % (@width * frequency)
+      x2 = (x1 + 1) % w_frequency
 
       xf = xa - xa.to_i
       xb = fade(xf)
 
-      @height.times do |y|
-        ya = (y * frequency) % (@height * frequency)
+      px1 = @p[x1]
+      px2 = @p[x2]
+
+      y_iter = 0
+
+      while y_iter < @height
+        ya = (y_iter * frequency) % h_frequency
         y1 = ya.to_i
-        y2 = (y1 + 1) % (@height * frequency)
+        y2 = (y1 + 1) % h_frequency
 
         yf = ya - ya.to_i
         yb = fade(yf)
 
-        top    = interpolate(gradient(@p[@p[x1] + y1], xf, yf), gradient(@p[@p[x2] + y1], xf - 1, yf), xb)
-        bottom = interpolate(gradient(@p[@p[x1] + y2], xf, yf - 1), gradient(@p[@p[x2] + y2], xf - 1, yf - 1), xb)
+        top    = interpolate(gradient(@p[px1 + y1], xf, yf), gradient(@p[px2 + y1], xf - 1, yf), xb)
+        bottom = interpolate(gradient(@p[px1 + y2], xf, yf - 1), gradient(@p[px2 + y2], xf - 1, yf - 1), xb)
 
-        noise[x][y] = (interpolate(top, bottom, yb) + 1) / 2
+        noise[x_iter][y_iter] = (interpolate(top, bottom, yb) + 1) / 2
+        y_iter += 1
       end
+      x_iter += 1
     end
     noise
   end
@@ -91,4 +110,19 @@ class PerlinNoise
     when 7 then -x + y
     end
   end
+end
+
+# Class to remove erronious draw calls
+class PixelNew
+  attr_sprite
+  def initialize(x, y)
+    @x = x
+    @y = y
+  end
+
+  def draw_override(ffi)
+    ffi.draw_sprite(@x, @y, SIM_SCALE, SIM_SCALE, 'pixel')
+  end
+
+  def serialize; {}; end; # This is to make the engine keep quiet about the custom pixel class.
 end
