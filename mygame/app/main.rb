@@ -4,7 +4,10 @@
 
 WIDTH   = 1280 # 0 - 1280
 HEIGHT  = 720 # 0 - 720
-OCTAVE  = 6 # Really not sure.
+
+# Controls the scale of the noise
+# Values over 10 break, so I'm assuming it's a percentage represented between 0-10
+OCTAVE  = 5 
 
 def tick(args)
   $perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
