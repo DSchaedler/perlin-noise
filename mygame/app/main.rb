@@ -3,16 +3,16 @@
 # ===ORIGINAL LICENSE===
 
 # The MIT License (MIT)
-# 
+#
 # Copyright (c) 2014 Melissa Whittington
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 
@@ -28,18 +28,35 @@
 
 # frozen_string_literal: true
 
-WIDTH   = 400 # 0 - 1280
-HEIGHT  = 400 # 0 - 720
+# 0 - 1280
+WIDTH = 1280
+# 0 - 720
+HEIGHT = 720
+
+Log = false
 
 # Controls the scale of the noise
 # Values 10 or over break, so I'm assuming it's a percentage represented between 0-9
-OCTAVE  = 5
+OCTAVE = 5
 
 def tick(args)
   $perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
+  ts = Time.new
   $noise ||= $perlin_noise.noise(OCTAVE)
+  te = Time.new
 
+  if args.tick_count == 0 && Log
+    puts(te - ts)
+    p("noise") if Log
+  end
+
+  ts = Time.new
   convert_pixels($noise) unless $noise_pixels
+  te = Time.new
+  if args.tick_count == 0 && Log
+    puts(te - ts)
+    p("convert_pixels")
+  end
 
   $output ||= false
   args.outputs.static_primitives.concat($noise_pixels) unless $output
@@ -47,21 +64,25 @@ def tick(args)
 end
 
 def convert_pixels(noise)
-  $noise_pixels ||= []
+  np = $noise_pixels ||= []
+  width = WIDTH
+  height = HEIGHT
+  np[width * height - 1] = nil
   x_iter = 0
 
-  while x_iter < WIDTH
+  while x_iter < width
     y_iter = 0
-    while y_iter < HEIGHT
-      $noise_pixels.unshift({ x: x_iter, y: y_iter, w: 1, h: 1, a: noise[x_iter][y_iter] * 255, primitive_marker: :solid })
+    while y_iter < height
+      np[y_iter * width + x_iter] = {x: x_iter, y: y_iter, w: 1, h: 1, a: noise[x_iter][y_iter] * 255, primitive_marker: :solid}
       y_iter += 1
     end
+
     x_iter += 1
   end
 end
 
 class PerlinNoise
-  def initialize(width, height, random = rand())
+  def initialize(width, height, random = rand)
     super
     @width = width
     @height = height
@@ -70,8 +91,8 @@ class PerlinNoise
   end
 
   def noise(octave)
-    noise     = []
-    period    = 1 << octave
+    noise = []
+    period = 1 << octave
     frequency = 1.0 / period
 
     w_frequency = @width * frequency
@@ -80,12 +101,12 @@ class PerlinNoise
     x_iter = 0
 
     while x_iter < @width
-      noise[x_iter] ||= []
+      nx = noise[x_iter] ||= []
       xa = (x_iter * frequency) % w_frequency
       x1 = xa.to_i
       x2 = (x1 + 1) % w_frequency
 
-      xf = xa - xa.to_i
+      xf = xa - x1
       xb = fade(xf)
 
       px1 = @p[x1]
@@ -98,17 +119,31 @@ class PerlinNoise
         y1 = ya.to_i
         y2 = (y1 + 1) % h_frequency
 
-        yf = ya - ya.to_i
+        yf = ya - y1
         yb = fade(yf)
+        grad_ary = [
+          -> (x, y) { y },
+          -> (x, y) { x + y },
+          -> (x, y) { x },
+          -> (x, y) { x - y },
+          -> (x, y) { -y },
+          -> (x, y) { -x - y },
+          -> (x, y) { -x },
+          -> (x, y) { -x + y }
+        ]
+        top = linear_interpolation(grad_ary[@p[px1 + y1] & 0x7][xf, yf], grad_ary[@p[px2 + y1] & 0x7][xf - 1, yf], xb)
+        bottom = linear_interpolation(grad_ary[@p[px1 + y2] & 0x7][xf, yf - 1], grad_ary[@p[px2 + y2] & 0x7][xf - 1, yf - 1], xb)
+        #leaving the old version to check whether my results weren't wrong
+        # top = linear_interpolation(gradient(@p[px1 + y1], xf, yf), gradient(@p[px2 + y1], xf - 1, yf), xb)
+        # bottom = linear_interpolation(gradient(@p[px1 + y2], xf, yf - 1), gradient(@p[px2 + y2], xf - 1, yf - 1), xb)
 
-        top    = interpolate(gradient(@p[px1 + y1], xf, yf), gradient(@p[px2 + y1], xf - 1, yf), xb)
-        bottom = interpolate(gradient(@p[px1 + y2], xf, yf - 1), gradient(@p[px2 + y2], xf - 1, yf - 1), xb)
-
-        noise[x_iter][y_iter] = (interpolate(top, bottom, yb) + 1) / 2
+        nx[y_iter] = (linear_interpolation(top, bottom, yb) + 1) / 2
         y_iter += 1
       end
+
       x_iter += 1
     end
+
     noise
   end
 
@@ -126,14 +161,22 @@ class PerlinNoise
 
   def gradient(h, x, y)
     case h & 7
-    when 0 then y
-    when 1 then x + y
-    when 2 then x
-    when 3 then x - y
-    when 4 then - y
-    when 5 then -x - y
-    when 6 then -x
-    when 7 then -x + y
+    when 0
+      y
+    when 1
+      x + y
+    when 2
+      x
+    when 3
+      x - y
+    when 4
+      -y
+    when 5
+      -x - y
+    when 6
+      -x
+    when 7
+      -x + y
     end
   end
 end
