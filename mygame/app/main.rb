@@ -28,21 +28,17 @@
 
 # frozen_string_literal: true
 
-PIXEL_SCALE = 1 # Recommended to reduce the octave if you increase this value.
-
+PIXEL_SCALE = 4 # Recommended to reduce the octave if you increase this value.
 OUTPUT_W = 1280
 OUTPUT_H = 720
 
-# 0 - 1280
-WIDTH = OUTPUT_W / PIXEL_SCALE
-# 0 - 720
-HEIGHT = OUTPUT_H / PIXEL_SCALE
+OCTAVE = 4 # 0 - 9
+FREQUENCY_NUMERATOR = 1.0
 
 Log = false
 
-# Controls the scale of the noise
-# Values 10 or over break, so I'm assuming it's a percentage represented between 0-9
-OCTAVE = 5
+WIDTH = OUTPUT_W / PIXEL_SCALE
+HEIGHT = OUTPUT_H / PIXEL_SCALE
 
 def tick(args)
   $perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
@@ -97,7 +93,7 @@ class PerlinNoise
   def noise(octave)
     noise = []
     period = 1 << octave
-    frequency = 1.0 / period
+    frequency = FREQUENCY_NUMERATOR / period
 
     w_frequency = @width * frequency
     h_frequency = @height * frequency
