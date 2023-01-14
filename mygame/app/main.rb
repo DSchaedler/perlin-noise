@@ -28,10 +28,15 @@
 
 # frozen_string_literal: true
 
+PIXEL_SCALE = 1 # Recommended to reduce the octave if you increase this value.
+
+OUTPUT_W = 1280
+OUTPUT_H = 720
+
 # 0 - 1280
-WIDTH = 1280
+WIDTH = OUTPUT_W / PIXEL_SCALE
 # 0 - 720
-HEIGHT = 720
+HEIGHT = OUTPUT_H / PIXEL_SCALE
 
 Log = false
 
@@ -73,7 +78,7 @@ def convert_pixels(noise)
   while x_iter < width
     y_iter = 0
     while y_iter < height
-      np[y_iter * width + x_iter] = {x: x_iter, y: y_iter, w: 1, h: 1, a: noise[x_iter][y_iter] * 255, primitive_marker: :solid}
+      np[y_iter * width + x_iter] = {x: x_iter * PIXEL_SCALE, y: y_iter * PIXEL_SCALE, w: 1 * PIXEL_SCALE, h: 1 * PIXEL_SCALE, a: noise[x_iter][y_iter] * 255, primitive_marker: :solid}
       y_iter += 1
     end
 
