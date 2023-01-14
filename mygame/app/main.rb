@@ -111,18 +111,3 @@ class PerlinNoise
     end
   end
 end
-
-# Class to remove erronious draw calls
-class PixelNew
-  attr_sprite
-  def initialize(x, y)
-    @x = x
-    @y = y
-  end
-
-  def draw_override(ffi)
-    ffi.draw_sprite(@x, @y, SIM_SCALE, SIM_SCALE, 'pixel')
-  end
-
-  def serialize; {}; end; # This is to make the engine keep quiet about the custom pixel class.
-end
