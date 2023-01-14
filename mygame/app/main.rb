@@ -67,7 +67,6 @@ def convert_pixels(noise)
   np = $noise_pixels ||= []
   width = WIDTH
   height = HEIGHT
-  np[width * height - 1] = nil
   x_iter = 0
 
   while x_iter < width
@@ -98,8 +97,18 @@ class PerlinNoise
     w_frequency = @width * frequency
     h_frequency = @height * frequency
 
-    x_iter = 0
+    grad_ary = [
+      -> (x, y) { y },
+      -> (x, y) { x + y },
+      -> (x, y) { x },
+      -> (x, y) { x - y },
+      -> (x, y) { -y },
+      -> (x, y) { -x - y },
+      -> (x, y) { -x },
+      -> (x, y) { -x + y }
+    ]
 
+    x_iter = 0
     while x_iter < @width
       nx = noise[x_iter] ||= []
       xa = (x_iter * frequency) % w_frequency
@@ -121,16 +130,6 @@ class PerlinNoise
 
         yf = ya - y1
         yb = fade(yf)
-        grad_ary = [
-          -> (x, y) { y },
-          -> (x, y) { x + y },
-          -> (x, y) { x },
-          -> (x, y) { x - y },
-          -> (x, y) { -y },
-          -> (x, y) { -x - y },
-          -> (x, y) { -x },
-          -> (x, y) { -x + y }
-        ]
         top = linear_interpolation(grad_ary[@p[px1 + y1] & 0x7][xf, yf], grad_ary[@p[px2 + y1] & 0x7][xf - 1, yf], xb)
         bottom = linear_interpolation(grad_ary[@p[px1 + y2] & 0x7][xf, yf - 1], grad_ary[@p[px2 + y2] & 0x7][xf - 1, yf - 1], xb)
         #leaving the old version to check whether my results weren't wrong
