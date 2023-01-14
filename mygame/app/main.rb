@@ -28,12 +28,12 @@
 
 # frozen_string_literal: true
 
-PIXEL_SCALE = 4 # Recommended to reduce the octave if you increase this value.
+PIXEL_SCALE = 8 # Recommended to reduce the octave if you increase this value.
 OUTPUT_W = 1280
 OUTPUT_H = 720
 
-OCTAVE = 4 # 0 - 9
-FREQUENCY_NUMERATOR = 1.0
+OCTAVE = 3 # 0 - 9. How gritty or smooth the noise is
+LACUNARITY = 2 # how bright the image is, how deep the lakes are.
 
 Log = false
 
@@ -41,9 +41,11 @@ WIDTH = OUTPUT_W / PIXEL_SCALE
 HEIGHT = OUTPUT_H / PIXEL_SCALE
 
 def tick(args)
-  $perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
+  $gtk.reset if args.inputs.keyboard.up
+
+  args.state.perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
   ts = Time.new
-  $noise ||= $perlin_noise.noise(OCTAVE)
+  args.state.noise ||= args.state.perlin_noise.noise(OCTAVE)
   te = Time.new
 
   if args.tick_count == 0 && Log
@@ -52,20 +54,20 @@ def tick(args)
   end
 
   ts = Time.new
-  convert_pixels($noise) unless $noise_pixels
+  convert_pixels(args, args.state.noise) unless args.state.noise_pixels
   te = Time.new
   if args.tick_count == 0 && Log
     puts(te - ts)
     p("convert_pixels")
   end
 
-  $output ||= false
-  args.outputs.static_primitives.concat($noise_pixels) unless $output
-  $output = true
+  args.state.output ||= false
+  args.outputs.static_primitives.concat(args.state.noise_pixels) unless args.state.output
+  args.state.output = true
 end
 
-def convert_pixels(noise)
-  np = $noise_pixels ||= []
+def convert_pixels(args, noise)
+  np = args.state.noise_pixels ||= []
   width = WIDTH
   height = HEIGHT
   x_iter = 0
@@ -93,7 +95,7 @@ class PerlinNoise
   def noise(octave)
     noise = []
     period = 1 << octave
-    frequency = FREQUENCY_NUMERATOR / period
+    frequency = 1.0 / period
 
     w_frequency = @width * frequency
     h_frequency = @height * frequency
@@ -137,7 +139,7 @@ class PerlinNoise
         # top = linear_interpolation(gradient(@p[px1 + y1], xf, yf), gradient(@p[px2 + y1], xf - 1, yf), xb)
         # bottom = linear_interpolation(gradient(@p[px1 + y2], xf, yf - 1), gradient(@p[px2 + y2], xf - 1, yf - 1), xb)
 
-        nx[y_iter] = (linear_interpolation(top, bottom, yb) + 1) / 2
+        nx[y_iter] = (linear_interpolation(top, bottom, yb) + 1) / LACUNARITY
         y_iter += 1
       end
 
