@@ -39,7 +39,7 @@ OCTAVES = 2 # number of octaves to use for the values
 LACUNARITY = 2 # multiplier for the frequency each octave; 2 is common in game dev
 PERSISTENCE = 0.5 # multiplier for the amplitude each octave; 0.5 is common in game dev
 
-Log = false
+LOG = false
 
 WIDTH = (OUTPUT_W / PIXEL_SCALE).to_i
 HEIGHT = (OUTPUT_H / PIXEL_SCALE).to_i
@@ -65,15 +65,15 @@ def tick(args)
     te = Time.new
   end
 
-  if args.tick_count == 0 && Log
+  if args.tick_count == 0 && LOG
   puts(te - ts)
-    p("noise") if Log
+    p("noise") if LOG
   end
 
   ts = Time.new
   convert_pixels(args, args.state.noise) unless args.state.noise_pixels
   te = Time.new
-  if args.tick_count == 0 && Log
+  if args.tick_count == 0 && LOG
     puts(te - ts)
     p("convert_pixels")
   end
