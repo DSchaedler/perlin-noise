@@ -41,15 +41,11 @@ PERSISTENCE = 0.5 # multiplier for the amplitude each octave; 0.5 is common in g
 
 Log = false
 
-# WIDTH = OUTPUT_W / PIXEL_SCALE
-# HEIGHT = OUTPUT_H / PIXEL_SCALE
 WIDTH = (OUTPUT_W / PIXEL_SCALE).to_i
 HEIGHT = (OUTPUT_H / PIXEL_SCALE).to_i
 
 def tick(args)
   $gtk.reset if args.inputs.keyboard.up
-
-  # args.state.perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
 
   # initialize the noise object. It doesn't actually perform anything yet,
   # just sets up its generation environment.
@@ -61,10 +57,6 @@ def tick(args)
     lacunarity: LACUNARITY, # optional
     seed: 123 # optional
   )
-
-  # ts = Time.new
-  # args.state.noise ||= args.state.perlin_noise.noise(FREQUENCY)
-  # te = Time.new
 
   if args.tick_count.zero?
     ts = Time.new
