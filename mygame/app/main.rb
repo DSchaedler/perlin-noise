@@ -28,28 +28,53 @@
 
 # frozen_string_literal: true
 
-PIXEL_SCALE = 8 # Recommended to reduce the frequency if you increase this value.
+PIXEL_SCALE = 4 # Recommended to reduce the frequency if you increase this value.
 OUTPUT_W = 1280
 OUTPUT_H = 720
 
-FREQUENCY = 3 # 0 - 9. How gritty or smooth the noise is
+# FREQUENCY = 3 # 0 - 9. How gritty or smooth the noise is
 BRIGHTNESS = 2 #
+
+OCTAVES = 2 # number of octaves to use for the values
+LACUNARITY = 2 # multiplier for the frequency each octave; 2 is common in game dev
+PERSISTENCE = 0.5 # multiplier for the amplitude each octave; 0.5 is common in game dev
 
 Log = false
 
-WIDTH = OUTPUT_W / PIXEL_SCALE
-HEIGHT = OUTPUT_H / PIXEL_SCALE
+# WIDTH = OUTPUT_W / PIXEL_SCALE
+# HEIGHT = OUTPUT_H / PIXEL_SCALE
+WIDTH = (OUTPUT_W / PIXEL_SCALE).to_i
+HEIGHT = (OUTPUT_H / PIXEL_SCALE).to_i
 
 def tick(args)
   $gtk.reset if args.inputs.keyboard.up
 
-  args.state.perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
-  ts = Time.new
-  args.state.noise ||= args.state.perlin_noise.noise(FREQUENCY)
-  te = Time.new
+  # args.state.perlin_noise ||= PerlinNoise.new(WIDTH, HEIGHT)
+
+  # initialize the noise object. It doesn't actually perform anything yet,
+  # just sets up its generation environment.
+  args.state.perlin_noise ||= PerlinNoise.new(
+    width: OUTPUT_W, # required
+    height: OUTPUT_H, # required
+    octaves: OCTAVES, # optional
+    persistence: PERSISTENCE, # optional
+    lacunarity: LACUNARITY, # optional
+    seed: 123 # optional
+  )
+
+  # ts = Time.new
+  # args.state.noise ||= args.state.perlin_noise.noise(FREQUENCY)
+  # te = Time.new
+
+  if args.tick_count.zero?
+    ts = Time.new
+    # this will actually build the x,y noise array
+    args.state.noise ||= build_noise_map(args)
+    te = Time.new
+  end
 
   if args.tick_count == 0 && Log
-    puts(te - ts)
+  puts(te - ts)
     p("noise") if Log
   end
 
@@ -64,6 +89,20 @@ def tick(args)
   args.state.output ||= false
   args.outputs.static_primitives.concat(args.state.noise_pixels) unless args.state.output
   args.state.output = true
+end
+
+def build_noise_map(args)
+  map = Array.new(WIDTH) { Array.new(HEIGHT) }
+  WIDTH.times do |x|
+    HEIGHT.times do |y|
+      # get the value at each x,y coordinate
+      # based on the init params we specified earlier
+      map[x][y] = args.state.perlin_noise.noise2d_value(x, y)
+    end
+  end
+  # This is our completed perlin noise map.
+  # Each x,y coordinate will have a float between 0 and 1 (inclusive)
+  map
 end
 
 def convert_pixels(args, noise)
@@ -84,22 +123,31 @@ def convert_pixels(args, noise)
 end
 
 class PerlinNoise
-  def initialize(width, height, random = rand)
-    super
+  def initialize(width:, height:, octaves: 1, persistence: 0.5, lacunarity: 2, seed: 123)
     @width = width
     @height = height
-
-    @p = (0...([@width, @height].max)).to_a.shuffle * 2
+    @octaves = octaves
+    @persistence = persistence
+    @lacunarity = lacunarity
+    @p = (0...([@width, @height].max)).to_a.shuffle(Random.new(seed)) * 2
   end
 
-  def noise(octave)
-    noise = []
-    period = 1 << octave
-    frequency = 1.0 / period
+  def noise2d_value(x, y)
+    total = 0.0
+    amplitude = 1
 
-    w_frequency = @width * frequency
-    h_frequency = @height * frequency
+    @frequency = 0.1
+    @octaves.times do |octave|
+      total += noise2d(x, y, octave) * amplitude
+      amplitude *= @persistence
+      @frequency *= @lacunarity
+    end
+    return total.clamp(0, 1)
+  end
 
+  private
+
+  def noise2d(x, y, octave)
     grad_ary = [
       -> (x, y) { y },
       -> (x, y) { x + y },
@@ -111,74 +159,37 @@ class PerlinNoise
       -> (x, y) { -x + y }
     ]
 
-    x_iter = 0
-    while x_iter < @width
-      nx = noise[x_iter] ||= []
-      xa = (x_iter * frequency) % w_frequency
-      x1 = xa.to_i
-      x2 = (x1 + 1) % w_frequency
+    period = 1 << octave
+    frequency = @frequency / period
+    w_frequency = @width * frequency
+    h_frequency = @height * frequency
 
-      xf = xa - x1
-      xb = fade(xf)
+    xa = (x * frequency) % w_frequency
+    x1 = xa.to_i
+    x2 = (x1 + 1) % w_frequency
 
-      px1 = @p[x1]
-      px2 = @p[x2]
+    xf = xa - x1
+    xb = fade(xf)
 
-      y_iter = 0
+    px1 = @p[x1]
+    px2 = @p[x2]
 
-      while y_iter < @height
-        ya = (y_iter * frequency) % h_frequency
-        y1 = ya.to_i
-        y2 = (y1 + 1) % h_frequency
+    ya = (y * frequency) % h_frequency
+    y1 = ya.to_i
+    y2 = (y1 + 1) % h_frequency
 
-        yf = ya - y1
-        yb = fade(yf)
-        top = linear_interpolation(grad_ary[@p[px1 + y1] & 0x7][xf, yf], grad_ary[@p[px2 + y1] & 0x7][xf - 1, yf], xb)
-        bottom = linear_interpolation(grad_ary[@p[px1 + y2] & 0x7][xf, yf - 1], grad_ary[@p[px2 + y2] & 0x7][xf - 1, yf - 1], xb)
-        #leaving the old version to check whether my results weren't wrong
-        # top = linear_interpolation(gradient(@p[px1 + y1], xf, yf), gradient(@p[px2 + y1], xf - 1, yf), xb)
-        # bottom = linear_interpolation(gradient(@p[px1 + y2], xf, yf - 1), gradient(@p[px2 + y2], xf - 1, yf - 1), xb)
-
-        nx[y_iter] = (linear_interpolation(top, bottom, yb) + 1) / BRIGHTNESS
-        y_iter += 1
-      end
-
-      x_iter += 1
-    end
-
-    noise
+    yf = ya - y1
+    yb = fade(yf)
+    top = lerp(grad_ary[@p[px1 + y1] & 0x7][xf, yf], grad_ary[@p[px2 + y1] & 0x7][xf - 1, yf], xb)
+    bottom = lerp(grad_ary[@p[px1 + y2] & 0x7][xf, yf - 1], grad_ary[@p[px2 + y2] & 0x7][xf - 1, yf - 1], xb)
+    (lerp(top, bottom, yb) + 1) / 2
   end
 
-  def interpolate(a, b, alpha)
-    linear_interpolation(a, b, alpha)
-  end
-
-  def linear_interpolation(a, b, alpha)
-    a * (1 - alpha) + b * alpha
+  def lerp(start, stop, step)
+    (stop * step) + (start * (1.0 - step))
   end
 
   def fade(t)
-    t * t * t * (t * (t * 6 - 15) + 10)
-  end
-
-  def gradient(h, x, y)
-    case h & 7
-    when 0
-      y
-    when 1
-      x + y
-    when 2
-      x
-    when 3
-      x - y
-    when 4
-      -y
-    when 5
-      -x - y
-    when 6
-      -x
-    when 7
-      -x + y
-    end
+    t * t * t * ((t * ((t * 6) - 15)) + 10)
   end
 end
