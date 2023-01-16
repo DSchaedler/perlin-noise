@@ -32,9 +32,6 @@ PIXEL_SCALE = 4 # Recommended to reduce the frequency if you increase this value
 OUTPUT_W = 1280
 OUTPUT_H = 720
 
-# FREQUENCY = 3 # 0 - 9. How gritty or smooth the noise is
-BRIGHTNESS = 2 #
-
 OCTAVES = 2 # number of octaves to use for the values
 LACUNARITY = 2 # multiplier for the frequency each octave; 2 is common in game dev
 PERSISTENCE = 0.5 # multiplier for the amplitude each octave; 0.5 is common in game dev
@@ -65,17 +62,17 @@ def tick(args)
     te = Time.new
   end
 
-  if args.tick_count == 0 && LOG
-  puts(te - ts)
-    p("noise") if LOG
+  if args.tick_count.zero? && LOG
+    puts(te - ts)
+    p('noise') if LOG
   end
 
   ts = Time.new
   convert_pixels(args, args.state.noise) unless args.state.noise_pixels
   te = Time.new
-  if args.tick_count == 0 && LOG
+  if args.tick_count.zero? && LOG
     puts(te - ts)
-    p("convert_pixels")
+    p('convert_pixels')
   end
 
   args.state.output ||= false
@@ -106,7 +103,7 @@ def convert_pixels(args, noise)
   while x_iter < width
     y_iter = 0
     while y_iter < height
-      np[y_iter * width + x_iter] = {x: x_iter * PIXEL_SCALE, y: y_iter * PIXEL_SCALE, w: 1 * PIXEL_SCALE, h: 1 * PIXEL_SCALE, a: noise[x_iter][y_iter] * 255, primitive_marker: :solid}
+      np[y_iter * width + x_iter] = { x: x_iter * PIXEL_SCALE, y: y_iter * PIXEL_SCALE, w: 1 * PIXEL_SCALE, h: 1 * PIXEL_SCALE, a: noise[x_iter][y_iter] * 255, primitive_marker: :solid }
       y_iter += 1
     end
 
@@ -134,21 +131,22 @@ class PerlinNoise
       amplitude *= @persistence
       @frequency *= @lacunarity
     end
-    return total.clamp(0, 1)
+
+    total.clamp(0, 1)
   end
 
   private
 
   def noise2d(x, y, octave)
     grad_ary = [
-      -> (x, y) { y },
-      -> (x, y) { x + y },
-      -> (x, y) { x },
-      -> (x, y) { x - y },
-      -> (x, y) { -y },
-      -> (x, y) { -x - y },
-      -> (x, y) { -x },
-      -> (x, y) { -x + y }
+      ->(x, y) { y },
+      ->(x, y) { x + y },
+      ->(x, y) { x },
+      ->(x, y) { x - y },
+      ->(x, y) { -y },
+      ->(x, y) { -x - y },
+      ->(x, y) { -x },
+      ->(x, y) { -x + y }
     ]
 
     period = 1 << octave
