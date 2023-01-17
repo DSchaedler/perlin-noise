@@ -31,7 +31,7 @@
 require "app/noise.rb"
 
 # Recommended to reduce the frequency if you increase this value.
-PIXEL_SCALE = 4
+PIXEL_SCALE = 1
 OUTPUT_W = 1280
 OUTPUT_H = 720
 
@@ -42,7 +42,7 @@ LACUNARITY = 2
 # multiplier for the amplitude each octave; 0.5 is common in game dev
 PERSISTENCE = 0.5
 
-LOG = false
+LOG = true
 
 WIDTH = (OUTPUT_W / PIXEL_SCALE).to_i
 HEIGHT = (OUTPUT_H / PIXEL_SCALE).to_i
@@ -98,11 +98,9 @@ def build_noise_map(noise)
   height = HEIGHT
   x = 0
 
-  # WIDTH.times do |x|
   while x < width
     mx = (map[x] = [])
     y = 0
-    # HEIGHT.times do |y|
     while y < height
       # get the value at each x,y coordinate
       # based on the init params we specified earlier

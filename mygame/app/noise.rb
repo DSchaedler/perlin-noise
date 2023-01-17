@@ -28,7 +28,6 @@ module Noise
 
         @frequency = 0.1
         octave = 0
-        # @octaves.times do |octave|
         while octave < @octaves
           total += noise2d(x, y, octave) * amplitude
           amplitude *= @persistence
@@ -53,7 +52,6 @@ module Noise
       x2 = (x1 + 1) % w_frequency
 
       xf = xa - x1
-      # xb = fade(xf)
       xb = xf * xf * xf * ((xf * ((xf * 6) - 15)) + 10)
 
       px1 = @p[x1]
@@ -64,18 +62,16 @@ module Noise
       y2 = (y1 + 1) % h_frequency
 
       yf = ya - y1
-      # yb = fade(yf)
       yb = yf * yf * yf * ((yf * ((yf * 6) - 15)) + 10)
-      # top = lerp(@grad_ary[@p[px1 + y1] & 0x7][xf, yf], @grad_ary[@p[px2 + y1] & 0x7][xf - 1, yf], xb)
+
       tl1 = @grad_ary[@p[px1 + y1] & 0x7][xf, yf]
       tl2 = @grad_ary[@p[px2 + y1] & 0x7][xf - 1, yf]
       top = (tl2 * xb) + (tl1 * (1.0 - xb))
-      # bottom = lerp(@grad_ary[@p[px1 + y2] & 0x7][xf, yf - 1], @grad_ary[@p[px2 + y2] & 0x7][xf - 1, yf - 1], xb)
+
       bl1 = @grad_ary[@p[px1 + y2] & 0x7][xf, yf - 1]
       bl2 = @grad_ary[@p[px2 + y2] & 0x7][xf - 1, yf - 1]
       bottom = (bl2 * xb) + (bl1 * (1.0 - xb))
 
-      # (lerp(top, bottom, yb) + 1) / 2
       ((bottom * yb) + (top * (1.0 - yb)) + 1) / 2
     end
 
