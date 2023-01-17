@@ -28,15 +28,19 @@
 
 # frozen_string_literal: true
 
-require 'app/noise.rb'
+require "app/noise.rb"
 
-PIXEL_SCALE = 4 # Recommended to reduce the frequency if you increase this value.
+# Recommended to reduce the frequency if you increase this value.
+PIXEL_SCALE = 4
 OUTPUT_W = 1280
 OUTPUT_H = 720
 
-OCTAVES = 2 # number of octaves to use for the values
-LACUNARITY = 2 # multiplier for the frequency each octave; 2 is common in game dev
-PERSISTENCE = 0.5 # multiplier for the amplitude each octave; 0.5 is common in game dev
+# number of octaves to use for the values
+OCTAVES = 2
+# multiplier for the frequency each octave; 2 is common in game dev
+LACUNARITY = 2
+# multiplier for the amplitude each octave; 0.5 is common in game dev
+PERSISTENCE = 0.5
 
 LOG = false
 
@@ -49,24 +53,30 @@ def tick(args)
   # initialize the noise object. It doesn't actually perform anything yet,
   # just sets up its generation environment.
   args.state.perlin_noise ||= Noise::PerlinNoise.new(
-    width: OUTPUT_W, # required
-    height: OUTPUT_H, # required
-    octaves: OCTAVES, # optional
-    persistence: PERSISTENCE, # optional
-    lacunarity: LACUNARITY, # optional
-    seed: 123 # optional
+    # required
+    width: OUTPUT_W,
+    # required
+    height: OUTPUT_H,
+    # optional
+    octaves: OCTAVES,
+    # optional
+    persistence: PERSISTENCE,
+    # optional
+    lacunarity: LACUNARITY,
+    # optional
+    seed: 123
   )
 
-  if args.tick_count.zero?
+  if args.tick_count == 0
     ts = Time.new
     # this will actually build the x,y noise array
-    args.state.noise ||= build_noise_map(args)
+    args.state.noise = build_noise_map(args.state.perlin_noise)
     te = Time.new
   end
 
   if args.tick_count.zero? && LOG
     puts(te - ts)
-    p('noise') if LOG
+    p("noise") if LOG
   end
 
   ts = Time.new
@@ -74,7 +84,7 @@ def tick(args)
   te = Time.new
   if args.tick_count.zero? && LOG
     puts(te - ts)
-    p('convert_pixels')
+    p("convert_pixels")
   end
 
   args.state.output ||= false
@@ -82,14 +92,25 @@ def tick(args)
   args.state.output = true
 end
 
-def build_noise_map(args)
-  map = Array.new(WIDTH) { Array.new(HEIGHT) }
-  WIDTH.times do |x|
-    HEIGHT.times do |y|
+def build_noise_map(noise)
+  map = []
+  width = WIDTH
+  height = HEIGHT
+  x = 0
+
+  # WIDTH.times do |x|
+  while x < width
+    mx = (map[x] = [])
+    y = 0
+    # HEIGHT.times do |y|
+    while y < height
       # get the value at each x,y coordinate
       # based on the init params we specified earlier
-      map[x][y] = args.state.perlin_noise.noise2d_value(x, y)
+      mx[y] = noise.noise2d_value(x, y)
+      y += 1
     end
+
+    x += 1
   end
   # This is our completed perlin noise map.
   # Each x,y coordinate will have a float between 0 and 1 (inclusive)
@@ -102,10 +123,19 @@ def convert_pixels(args, noise)
   height = HEIGHT
   x_iter = 0
 
+  px_scale = PIXEL_SCALE
   while x_iter < width
     y_iter = 0
+    nx = noise[x_iter]
     while y_iter < height
-      np[y_iter * width + x_iter] = { x: x_iter * PIXEL_SCALE, y: y_iter * PIXEL_SCALE, w: 1 * PIXEL_SCALE, h: 1 * PIXEL_SCALE, a: noise[x_iter][y_iter] * 255, primitive_marker: :solid }
+      np[y_iter * width + x_iter] = {
+        x: x_iter * px_scale,
+        y: y_iter * px_scale,
+        w: px_scale,
+        h: px_scale,
+        a: nx[y_iter] * 255,
+        primitive_marker: :solid
+      }
       y_iter += 1
     end
 
