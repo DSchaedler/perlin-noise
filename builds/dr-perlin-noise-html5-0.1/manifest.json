@@ -1,0 +1,15 @@
+{
+	"app/main.rbc" : { "filesize" : 1856, "filetime" : 1674845917 },
+	"app/noise.rbc" : { "filesize" : 2342, "filetime" : 1674845917 },
+	"console-logo.png" : { "filesize" : 25034, "filetime" : 1674845917 },
+	"dragonruby-controller.png" : { "filesize" : 32688, "filetime" : 1674845917 },
+	"dragonruby.png" : { "filesize" : 14417, "filetime" : 1674845917 },
+	"font.ttf" : { "filesize" : 3146844, "filetime" : 1674845917 },
+	"metadata/DRAGONRUBY_PRODUCTION_BUILD" : { "filesize" : 0, "filetime" : 1674845917 },
+	"metadata/game_metadata.txt" : { "filesize" : 356, "filetime" : 1674845917 },
+	"metadata/icon.png" : { "filesize" : 157056, "filetime" : 1674845917 },
+	"metadata/ios_metadata.txt" : { "filesize" : 923, "filetime" : 1674845917 },
+	"open-source-licenses.txt" : { "filesize" : 32593, "filetime" : 1674845917 },
+	"README-dr-perlin-noise.txt" : { "filesize" : 71, "filetime" : 1674845917 },
+	"" : {}
+}
